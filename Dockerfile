@@ -1,30 +1,56 @@
-FROM continuumio/miniconda3:latest
-MAINTAINER Fangyu Wu (fangyuwu@berkeley.edu)
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu18.04 AS base
+ARG DEBIAN_FRONTEND=noninteractive
+
+# FROM continuumio/miniconda3:latest
+# MAINTAINER Fangyu Wu (fangyuwu@berkeley.edu)
+
+FROM base as python-req
 
 # System
-RUN apt-get update && \
-	apt-get -y upgrade && \
-	apt-get install -y \
+RUN apt-get update -q \
+    && apt-get install -y --no-install-recommends \
+    apt-utils \
+    build-essential \
+    curl \
+    wget \
+    git \
+    ssh \
+    parallel \
+    python3.7 \
+    python3-pip \
+    libxml2 \
+    software-properties-common \
+    unzip \
     vim \
-    apt-utils && \
-    pip install -U pip
+    tmux \
+    virtualenv \
+    rsync \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Flow dependencies
-RUN cd ~ && \
-    conda install opencv && \
-    pip install tensorflow
+# Set the PATH to the venv before we create the venv, so it's visible in base.
+# This is since we may create the venv outside of Docker, e.g. in CI
+# or by binding it in for local development.
+ENV VIRTUAL_ENV=/venv
+ENV PATH="/venv/bin:$PATH"
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
 
-# Flow
-RUN cd ~ && \
-	git clone https://github.com/flow-project/flow.git && \
-    cd flow && \
-    git checkout v0.3.0 && \
-	pip install -e .
+# python-req stage contains Python venv, but not code.
+# It is useful for development purposes: you can mount
+# code from outside the Docker container.
+
+WORKDIR /flow
+# Copy over just setup.py and dependencies (__init__.py and README.md)
+# to avoid rebuilding venv when requirements have not changed.
+COPY ./setup.py ./setup.py
+COPY ./requirements.txt ./requirements.txt
+COPY ./README.md ./README.md
+COPY ./flow/__init__.py ./flow/__init__.py
+COPY ./flow/version.py ./flow/version.py
 
 # SUMO dependencies
-RUN apt-get install -y \
-	cmake \
-	build-essential \
+RUN apt-get update -q \
+    && apt-get install -y --no-install-recommends \
 	swig \
 	libgdal-dev \
 	libxerces-c-dev \
@@ -32,24 +58,18 @@ RUN apt-get install -y \
 	libfox-1.6-dev \
 	libxml2-dev \
 	libxslt1-dev \
-	openjdk-8-jdk
+	openjdk-8-jdk \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# SUMO
-RUN cd ~ && \
-	git clone --recursive https://github.com/eclipse/sumo.git && \
-	cd sumo && \
-	git checkout cbe5b73 && \
-    mkdir build/cmake-build && \
-	cd build/cmake-build && \
-	cmake ../.. && \
-	make
+# Install SUMO
+COPY ./scripts/setup_sumo_ubuntu1804.sh ./scripts/setup_sumo_ubuntu1804.sh
+RUN ./scripts/setup_sumo_ubuntu1804.sh
+# ENV SUMO_HOME="$HOME/sumo"
+# ENV PATH="$HOME/sumo/bin:$PATH"
+# ENV PYTHONPATH="$HOME/sumo/tools:$PYTHONPATH"
 
-# Ray/RLlib
-RUN cd ~ && \
-	pip install ray==0.6.2 \
-                psutil
-    
-# Startup process
-RUN	echo 'export SUMO_HOME="$HOME/sumo"' >> ~/.bashrc && \
-	echo 'export PATH="$HOME/sumo/bin:$PATH"' >> ~/.bashrc && \
-	echo 'export PYTHONPATH="$HOME/sumo/tools:$PYTHONPATH"' >> ~/.bashrc
+# Create virtual environment
+COPY ./runners/build_and_activate_venv.sh ./runners/build_and_activate_venv.sh
+RUN ./runners/build_and_activate_venv.sh /venv \
+    && rm -rf $HOME/.cache/pip
