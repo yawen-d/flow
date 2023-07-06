@@ -31,3 +31,4 @@ pytz
 protobuf==3.20
 tensorboardX==1.9  # not installed
 jupyterlab  # not installed
+dm_tree==0.1.8
