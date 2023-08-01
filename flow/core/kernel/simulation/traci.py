@@ -237,8 +237,8 @@ class TraCISimulation(KernelSimulation):
                 # Opening the I/O thread to SUMO
                 self.sumo_proc = subprocess.Popen(
                     sumo_call,
-                    stdout=subprocess.DEVNULL
-                )
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
 
                 # wait a small period of time for the subprocess to activate
                 # before trying to connect with traci

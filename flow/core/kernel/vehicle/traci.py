@@ -19,6 +19,9 @@ WHITE = (255, 255, 255)
 CYAN = (0, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+PURPLE = (255, 0, 255)
+
 STEPS = 10
 rdelta = 255 / STEPS
 # smoothly go from red to green as the speed increases
@@ -84,6 +87,8 @@ class TraCIVehicle(KernelVehicle):
             self._force_color_update = sim_params.force_color_update
         except AttributeError:
             self._force_color_update = False
+        self._color_by_speed = False
+        self._force_color_update = True
 
         # old speeds used to compute accelerations
         self.previous_speeds = {}
@@ -1058,11 +1063,13 @@ class TraCIVehicle(KernelVehicle):
         for veh_id in self.get_ids():
             try:
                 if 'av' in veh_id:
-                    color = RED
                     # If vehicle is already being colored via argument to vehicles.add(), don't re-color it.
                     if self._force_color_update or 'color' not in \
                             self.type_parameters[self.get_type(veh_id)]:
-                        self.set_color(veh_id=veh_id, color=color)
+                        if self.get_position(veh_id) > 40:
+                            self.set_color(veh_id=veh_id, color=RED)
+                        else:
+                            self.set_color(veh_id=veh_id, color=GREEN)
             except (FatalTraCIError, TraCIException) as e:
                 print('Error when updating human vehicle colors:', e)
 

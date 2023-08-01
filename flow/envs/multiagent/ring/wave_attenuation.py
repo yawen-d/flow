@@ -177,6 +177,10 @@ class MultiAgentWaveAttenuationPOEnv(MultiEnv):
                 raise KeyError(
                     'Environment parameter \'{}\' not supplied'.format(p))
 
+        self.local_reward = env_params.additional_params["local"]
+        if 'eta' in env_params.additional_params:
+            self.eta = float(env_params.additional_params['eta'])
+
         super().__init__(env_params, sim_params, network, simulator)
 
     @property
@@ -224,15 +228,22 @@ class MultiAgentWaveAttenuationPOEnv(MultiEnv):
     def compute_reward(self, rl_actions, **kwargs):
         """See class definition."""
         # in the warmup steps
-        if rl_actions is None:
+        if rl_actions is None or kwargs['fail']:
             return 0
+      
+        if self.local_reward == 'local':
+            idx = self.k.vehicle.get_rl_ids()
+        elif self.local_reward == 'consecutive':
+            idx = self.k.vehicle.get_rl_ids()[:2]
+        elif self.local_reward == 'alternating':
+            idx = self.k.vehicle.get_rl_ids()
+            idx = [idx[0], idx[2]]
+        else:
+            idx = self.k.vehicle.get_ids()
 
-        vel = np.array([
-            self.k.vehicle.get_speed(veh_id)
-            for veh_id in self.k.vehicle.get_ids()
-        ])
+        vel = np.array([self.k.vehicle.get_speed(veh_id) for veh_id in idx])
 
-        if any(vel < -100) or kwargs['fail']:
+        if any(vel < -100):
             return 0.
 
         # reward average velocity
@@ -240,7 +251,7 @@ class MultiAgentWaveAttenuationPOEnv(MultiEnv):
         reward = eta_2 * np.mean(vel) / 20
 
         # punish accelerations (should lead to reduced stop-and-go waves)
-        eta = 4  # 0.25
+        eta = self.eta
         mean_actions = np.mean(np.abs(list(rl_actions.values())))
         accel_threshold = 0
 
@@ -310,3 +321,23 @@ class MultiAgentWaveAttenuationPOEnv(MultiEnv):
 
         # perform the generic reset function
         return super().reset()
+
+class MultiAgentWaveAttenuationEnv(MultiAgentWaveAttenuationPOEnv):
+	
+	@property
+	def observation_space(self):
+		return Box(low=-5, high=5, shape=(2 * self.initial_vehicles.num_vehicles, ), dtype=np.float32)
+
+	def get_state(self):
+		speed = [self.k.vehicle.get_speed(veh_id) / self.k.network.max_speed() for veh_id in self.k.vehicle.get_ids()]
+		pos = [self.k.vehicle.get_x_by_id(veh_id) / self.k.network.length() for veh_id in self.k.vehicle.get_ids()]
+		obs = np.array(speed + pos)
+		state = {}
+		for rl_id in self.k.vehicle.get_rl_ids():
+			state[rl_id] = obs
+		return state
+
+	def additional_command(self):
+		if self.k.vehicle.num_rl_vehicles > 0:
+			for veh_id in self.k.vehicle.get_human_ids():
+				self.k.vehicle.set_observed(veh_id)
