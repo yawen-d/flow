@@ -32,6 +32,8 @@ from flow.utils.rllib import get_flow_params
 from flow.utils.rllib import get_rllib_config
 from flow.utils.rllib import get_rllib_pkl
 
+import tensorflow as tf
+
 
 EXAMPLE_USAGE = """
 example usage:
@@ -52,7 +54,7 @@ def visualizer_rllib(args):
     """
     result_dir = args.result_dir if args.result_dir[-1] != '/' \
         else args.result_dir[:-1]
-
+    print(result_dir)
     config = get_rllib_config(result_dir)
 
     # check if we have a multiagent environment but in a

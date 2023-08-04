@@ -16,7 +16,7 @@ RUN apt-get update -q \
     git \
     ssh \
     parallel \
-    python3.7 \
+    python3.8 \
     python3-pip \
     libxml2 \
     software-properties-common \
