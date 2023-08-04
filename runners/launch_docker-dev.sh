@@ -44,6 +44,7 @@ docker run -it --rm --init \
   -p 8899:8899 \
   -p 6006:6006 \
   -v "${FLOW_LOCAL_MNT}:/flow" \
+  -v "${HOME}/.netrc:/root/.netrc" \
   ${DOCKER_IMAGE} \
   /bin/bash -c "${CMD} && exec bash"
   # /bin/bash -c "exec bash && ${CMD}"

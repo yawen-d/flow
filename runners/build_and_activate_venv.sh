@@ -14,7 +14,7 @@ if [[ ${venv} == "" ]]; then
 fi
 python_version=$2
 if [[ ${python_version} == "" ]]; then
-  python_version="python3.7"
+  python_version="python3.8"
 fi
 
 virtualenv -p ${python_version} ${venv}
@@ -25,7 +25,11 @@ source ${venv}/bin/activate
 # This will prevent installing the CUDA version in the pip install ".[docs,parallel,test]" command.
 # The CUDA version is a couple of gigabytes larger than the CPU version.
 # Since we don't need the CUDA version for testing, we can save some time by not installing it.
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  pip install torch --index-url https://download.pytorch.org/whl/cpu
-fi
-pip install .
+# if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# fi
+pip install setuptools==65.5.0
+pip install pip==21
+# installing gym==0.21 requires an early version of setuptools and pip
+# https://github.com/openai/gym/issues/3176
+pip install -e .
