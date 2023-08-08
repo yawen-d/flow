@@ -1,6 +1,6 @@
 wandb/
 nohup.out
-data/
+results/
 venv/
 
 # Byte-compiled / optimized / DLL files

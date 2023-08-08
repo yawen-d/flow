@@ -34,3 +34,11 @@ tensorboardX>=1.9  # not installed
 jupyterlab  # not installed
 dm_tree>=0.1.8
 wandb>=0.15.5
+stable_baselines3<2.0.0
+tensorboard
+pytest
+black
+mypy>=1
+pytest>=7
+pytest-mock
+pytest-cov>=3.0
