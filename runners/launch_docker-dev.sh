@@ -15,7 +15,7 @@ TAG=""
 
 while test $# -gt 0; do
   case "$1" in
-  --python-req)
+  -p | --python-req)
     TAG="python-req" # Pull the image from Docker Hub
     shift
     ;;
@@ -47,4 +47,5 @@ docker run -it --rm --init \
   -v "${HOME}/.netrc:/root/.netrc" \
   ${DOCKER_IMAGE} \
   /bin/bash -c "${CMD} && exec bash"
+  # --user="$(id -u):$(id -g)" \
   # /bin/bash -c "exec bash && ${CMD}"
